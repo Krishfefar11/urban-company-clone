@@ -66,7 +66,7 @@ app.use(globalLimiter)
 app.use('/api/auth',     strictLimiter)
 app.use('/api/payments', strictLimiter)
 
-// ── Allowed origins (dev: 5173 + 5174, prod: FRONTEND_URL) ──────────────────
+// ── Allowed origins (dev: 5173 + 5174, prod: FRONTEND_URL + Vercel previews) ─
 const ALLOWED_ORIGINS = [
   process.env.FRONTEND_URL,
   'http://localhost:5173',
@@ -75,7 +75,11 @@ const ALLOWED_ORIGINS = [
 
 const corsOriginFn = (origin, cb) => {
   // Allow requests with no origin (curl, Postman, server-to-server)
-  if (!origin || ALLOWED_ORIGINS.includes(origin)) return cb(null, true)
+  if (!origin) return cb(null, true)
+  // Allow exact matches
+  if (ALLOWED_ORIGINS.includes(origin)) return cb(null, true)
+  // Allow all Vercel preview deployments for this project
+  if (origin.endsWith('.vercel.app')) return cb(null, true)
   cb(new Error(`CORS: origin ${origin} not allowed`))
 }
 
