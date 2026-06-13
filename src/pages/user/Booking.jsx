@@ -84,7 +84,7 @@ const Booking = () => {
   const canNext = [
     true,
     slot !== null,
-    address.line1.trim().length >= 5 && address.city.trim(),
+    address.line1.trim().length > 0 && address.city.trim().length > 0,
     true,
   ]
 
@@ -278,7 +278,7 @@ const Booking = () => {
                   </div>
                   <div>
                     <label htmlFor="addr-pincode" className="label">
-                      Pincode <span className="text-red-400">*</span>
+                      Pincode
                     </label>
                     <input
                       id="addr-pincode"
