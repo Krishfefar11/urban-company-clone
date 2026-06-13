@@ -173,7 +173,7 @@ const SERVICES = [
     slug:  'ac-service-gas-refill',
     category: 'ac-repair',
     description: 'Complete AC servicing including deep coil cleaning, filter wash, gas pressure check, and top-up if required. Improves cooling efficiency by up to 30%.',
-    icon: '❄️', image: 'https://images.unsplash.com/photo-1631545806609-42d8e8b96a6c?w=800',
+    icon: '❄️', image: 'https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=800',
     duration: '60-90 minutes', tag: 'Bestseller', rating: 4.76, totalReviews: 2600,
     includes: ['Coil cleaning', 'Filter washing', 'Gas pressure check', 'Drain cleaning', 'Performance test'],
     excludes: ['Gas refill (charged extra if needed)', 'PCB/part replacement'],
