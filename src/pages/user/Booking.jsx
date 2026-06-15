@@ -7,7 +7,18 @@ import {
 } from 'react-icons/fi'
 import { fetchServiceById } from '../../api/services.js'
 import { createBooking } from '../../api/bookings.js'
+import { createOrder, verifyPayment } from '../../api/payments.js'
 import { useAuth } from '../../context/AuthContext.jsx'
+
+const loadRazorpayScript = () =>
+  new Promise((resolve, reject) => {
+    if (window.Razorpay) return resolve()
+    const script = document.createElement('script')
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js'
+    script.onload  = resolve
+    script.onerror = () => reject(new Error('Failed to load Razorpay. Check your connection.'))
+    document.body.appendChild(script)
+  })
 
 const DATES = Array.from({ length: 7 }, (_, i) => {
   const d = new Date()
@@ -42,10 +53,7 @@ const Booking = () => {
 
   const svc = data?.service
 
-  const mutation = useMutation({
-    mutationFn: createBooking,
-    onSuccess: (res) => navigate(`/booking/confirmation/${res.booking._id}`),
-  })
+  const mutation = useMutation({ mutationFn: createBooking })
 
   const [step,    setStep]    = useState(0)
   const [plan,    setPlan]    = useState(0)
@@ -59,7 +67,9 @@ const Booking = () => {
     city:    defaultAddr?.city    || dbUser?.city || 'Ahmedabad',
     pincode: defaultAddr?.pincode || '',
   })
-  const [payment, setPayment] = useState('online')
+  const [payment,      setPayment]      = useState('online')
+  const [paymentError, setPaymentError] = useState('')
+  const [paymentLoading, setPaymentLoading] = useState(false)
 
   if (isLoading) return (
     <div className="min-h-screen flex items-center justify-center" aria-label="Loading booking">
@@ -88,16 +98,77 @@ const Booking = () => {
     true,
   ]
 
-  const handleBook = () => {
-    const selectedDate = new Date(DATES[dateIdx].date)
-    selectedDate.setHours(SLOT_HOURS[slot], 0, 0, 0)
-    mutation.mutate({
-      service:     serviceId,
-      scheduledAt: selectedDate.toISOString(),
-      address,
-      pricingTier: { name: planName, price },
-      payment:     { method: payment },
-    })
+  const handleBook = async () => {
+    setPaymentError('')
+    setPaymentLoading(true)
+
+    try {
+      // Step 1 — create booking
+      const selectedDate = new Date(DATES[dateIdx].date)
+      selectedDate.setHours(SLOT_HOURS[slot], 0, 0, 0)
+
+      const res = await mutation.mutateAsync({
+        service:     serviceId,
+        scheduledAt: selectedDate.toISOString(),
+        address,
+        pricingTier: { name: planName, price },
+        payment:     { method: payment },
+      })
+      const bookingId = res.booking._id
+
+      // Cash — go straight to confirmation
+      if (payment === 'cash') {
+        navigate(`/booking/confirmation/${bookingId}`)
+        return
+      }
+
+      // Step 2 — create Razorpay order
+      const order = await createOrder({ amount: price, bookingId })
+
+      // Step 3 — load script + open modal
+      await loadRazorpayScript()
+
+      const rzp = new window.Razorpay({
+        key:         order.keyId,
+        amount:      order.amount,
+        currency:    order.currency,
+        order_id:    order.orderId,
+        name:        'Urban Company',
+        description: svc.title,
+        image:       '/favicon.svg',
+        prefill: {
+          name:    dbUser?.name    || '',
+          email:   dbUser?.email   || '',
+          contact: dbUser?.phone   || '',
+        },
+        theme: { color: '#1AB64F' },
+        handler: async (response) => {
+          try {
+            await verifyPayment({
+              razorpay_order_id:   response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature:  response.razorpay_signature,
+              bookingId,
+            })
+            navigate(`/booking/confirmation/${bookingId}`)
+          } catch {
+            setPaymentError('Payment verification failed. Please contact support.')
+            setPaymentLoading(false)
+          }
+        },
+        modal: {
+          ondismiss: () => {
+            // Booking exists but unpaid — still send to confirmation
+            navigate(`/booking/confirmation/${bookingId}`)
+          },
+        },
+      })
+
+      rzp.open()
+    } catch (err) {
+      setPaymentError(err.message || 'Something went wrong. Please try again.')
+      setPaymentLoading(false)
+    }
   }
 
   return (
@@ -348,10 +419,10 @@ const Booking = () => {
                 </div>
               </div>
 
-              {mutation.isError && (
+              {(mutation.isError || paymentError) && (
                 <div className="error-banner mt-4" role="alert">
                   <FiAlertCircle size={14} className="flex-shrink-0" />
-                  {mutation.error?.message || 'Booking failed. Please try again.'}
+                  {paymentError || mutation.error?.message || 'Booking failed. Please try again.'}
                 </div>
               )}
             </div>
@@ -402,12 +473,12 @@ const Booking = () => {
           ) : (
             <button
               onClick={handleBook}
-              disabled={mutation.isPending}
+              disabled={mutation.isPending || paymentLoading}
               className="btn btn-brand w-full"
             >
-              {mutation.isPending ? (
-                <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Confirming…</>
-              ) : `Confirm & Pay ₹${price}`}
+              {(mutation.isPending || paymentLoading) ? (
+                <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> {payment === 'cash' ? 'Confirming…' : 'Opening payment…'}</>
+              ) : payment === 'cash' ? `Confirm Booking` : `Confirm & Pay ₹${price}`}
             </button>
           )}
         </div>
