@@ -162,7 +162,11 @@ router.get('/pro', authenticate, requireProfessional, async (req, res) => {
     const limit = parseInt(req.query.limit) || 10
     const skip  = (page - 1) * limit
 
-    const query = { professional: req.user._id }
+    // Booking.professional stores the Professional._id, not User._id — look it up first
+    const professional = await Professional.findOne({ user: req.user._id })
+    if (!professional) return res.status(404).json({ success: false, message: 'Professional profile not found' })
+
+    const query = { professional: professional._id }
     if (req.query.status) query.status = req.query.status
 
     const [bookings, total] = await Promise.all([

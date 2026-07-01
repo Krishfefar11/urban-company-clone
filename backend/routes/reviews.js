@@ -17,8 +17,8 @@ router.post('/', authenticate, async (req, res) => {
       Review.find({ service }),
       Review.find({ professional }),
     ])
-    const avgSvc = svcReviews.reduce((a, r) => a + r.rating, 0) / svcReviews.length
-    const avgPro = proReviews.reduce((a, r) => a + r.rating, 0) / proReviews.length
+    const avgSvc = svcReviews.length > 0 ? svcReviews.reduce((a, r) => a + r.rating, 0) / svcReviews.length : 0
+    const avgPro = proReviews.length > 0 ? proReviews.reduce((a, r) => a + r.rating, 0) / proReviews.length : 0
 
     await Promise.all([
       Service.findByIdAndUpdate(service, { rating: avgSvc.toFixed(1), totalReviews: svcReviews.length }),

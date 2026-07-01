@@ -31,6 +31,8 @@ export const AuthProvider = ({ children }) => {
           if (res.ok) {
             const data = await res.json()
             setDbUser(data.user || data)   // handles both { success, user } and bare user
+          } else {
+            console.error('Failed to fetch user profile: HTTP', res.status)
           }
         } catch (err) {
           console.error('Failed to fetch user profile:', err)

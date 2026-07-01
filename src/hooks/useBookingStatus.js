@@ -1,7 +1,11 @@
 import { useEffect, useState, useRef } from 'react'
 import { io } from 'socket.io-client'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+// Strip /api suffix to get the socket server base URL.
+// When VITE_API_URL is a relative path ('/api'), connecting to '' uses the current
+// origin — the Vite dev proxy routes /socket.io → localhost:5001 automatically.
+// In production VITE_API_URL should be the full backend URL (https://xyz.onrender.com/api).
+const SOCKET_URL = (import.meta.env.VITE_API_URL || '/api').replace(/\/api$/, '')
 
 export const STATUS_LABELS = {
   pending:     { label: 'Booking Received',     color: 'text-yellow-600', bg: 'bg-yellow-50',  dot: 'bg-yellow-400' },
@@ -22,7 +26,7 @@ export function useBookingStatus(bookingId, initialStatus = 'pending') {
   useEffect(() => {
     if (!bookingId) return
 
-    const socket = io(API_URL, { transports: ['websocket', 'polling'] })
+    const socket = io(SOCKET_URL, { transports: ['websocket', 'polling'] })
     socketRef.current = socket
 
     socket.on('connect', () => {

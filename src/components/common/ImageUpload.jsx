@@ -40,7 +40,7 @@ const ImageUpload = ({
       formData.append('folder', folder)
 
       // Use raw fetch for multipart — apiFetch forces Content-Type: application/json
-      const token = getToken()
+      const token = await getToken()
       const res = await fetch(`${BASE}/upload`, {
         method: 'POST',
         body:   formData,

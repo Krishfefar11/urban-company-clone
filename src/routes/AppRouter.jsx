@@ -49,8 +49,8 @@ const AppRouter = () => (
 
         {/* ── Protected user routes ── */}
         <Route element={<MainLayout />}>
-          <Route path="/booking/:serviceId"              element={<ProtectedRoute><Booking /></ProtectedRoute>} />
           <Route path="/booking/confirmation/:bookingId" element={<ProtectedRoute><BookingConfirmation /></ProtectedRoute>} />
+          <Route path="/booking/:serviceId"              element={<ProtectedRoute><Booking /></ProtectedRoute>} />
           <Route path="/profile"                         element={<ProtectedRoute><Profile /></ProtectedRoute>} />
           <Route path="/my-bookings"                     element={<ProtectedRoute><BookingHistory /></ProtectedRoute>} />
           <Route path="/wallet"      element={<ProtectedRoute><Wallet /></ProtectedRoute>} />

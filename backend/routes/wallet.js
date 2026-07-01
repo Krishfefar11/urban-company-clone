@@ -2,6 +2,7 @@ import express from 'express'
 import User from '../models/User.js'
 import WalletTransaction from '../models/WalletTransaction.js'
 import { authenticate } from '../middleware/auth.js'
+import { requireAdmin } from '../middleware/role.js'
 import logger from '../utils/logger.js'
 
 const router = express.Router()
@@ -69,7 +70,7 @@ router.post('/deduct', authenticate, async (req, res) => {
 })
 
 // ── POST /api/wallet/credit — admin credits wallet (refund / cashback) ────────
-router.post('/credit', authenticate, async (req, res) => {
+router.post('/credit', authenticate, requireAdmin, async (req, res) => {
   try {
     const { amount, description, bookingId } = req.body
     if (!amount || amount <= 0) return res.status(400).json({ success: false, message: 'Invalid amount' })
